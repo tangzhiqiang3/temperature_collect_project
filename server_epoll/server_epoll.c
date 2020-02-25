@@ -31,20 +31,17 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <sqlite3.h>
-#include <poll.h>
+#include <sys/epoll.h> 
 #include "server_socket_init.h"
 #include "create_database.h"
 
-//#define MAX_EVENTS      512
+#define MAX_EVENTS      512
 #define ARRAY_SIZE(x)   (sizeof(x)/sizeof(x[0]))    //计算结构体/数组元素个数
 #define database_name    "temper.db"
-//#define MAX_POLL_FD     1024
 
 //void set_socket_rlimit(void);
 int create_database(void);
 int server_socket_init(char *listenip, int listen_port);
-//int fds_add(struct pollfd *fds, int fd);
-//int fds_del(struct pollfd *fds, int fd);
 
 int     g_sigstop = 0;
 void signal_stop(int signum)
@@ -78,12 +75,14 @@ int main(int argc, char *argv[])
     int     rv;
     int     log_fd;
     int     i;
-    int     found;
+    //int     found;
     char    buf[1024];
     char    sql1[28];
-    int     maxfd;
-    //fd_set  rdset;
-    struct pollfd pollfds[1024];
+    
+    int     epollfd;
+    struct  epoll_event event;
+    struct  epoll_event event_array[MAX_EVENTS];
+    int     events;
     
     char    *zErrMsg = NULL;
     int     ret;
@@ -169,98 +168,87 @@ int main(int argc, char *argv[])
         return -1;
     }  
     printf("Create database OK\n");
-    //初始化poll结构体
-    for(i=0; i<ARRAY_SIZE(pollfds); i++)
+    /*  将加入 listenfd 到兴趣数组中 */
+    if((epollfd=epoll_create(MAX_EVENTS)) < 0)       //这里缺少括号，优先级出问题了 已改
     {
-        pollfds[i].fd=-1;                //清空数组，全部赋值为-1
-        //pollfds[i].events = 0;
+        printf("%s create epoll farilure: %s\n", argv[0], strerror(errno));
+        return -3;
     }
-     /*  将加入 listenfd 到集合中 */
-    pollfds[0].fd = listenfd;            //加入监听的文件描述符
-    pollfds[0].events = POLLIN;
-    maxfd=0;
+    printf("programe create epoll[%d] OK.\n", epollfd);
+    /* 必须将文件描述符赋值给event.data.fd */
+    event.events = EPOLLIN; 
+    event.data.fd = listenfd;
+    if(epoll_ctl(epollfd, EPOLL_CTL_ADD, listenfd, &event) < 0 )
+    {
+        printf("epoll add listen socket[%d] failure: %s\n", listenfd, strerror(errno));
+        return -4;
+    }
+    
     //printf("programe will start running...\n");
     while(!g_sigstop)
     {   
-        //每次while循环，清空rdset集合，然后把存放在数组当中的有效文件描述符，再加入到集合中
+        //program will blocked here
         printf("programe will blocked here...\n");
-        //printf("maxfd=%d\n", maxfd);
-        rv = poll(pollfds, maxfd+1, -1);           //减少数组的遍历次数
-        //printf("rv=%d\n", rv);            //测试poll返回值
-        if(rv < 0)
+        events=epoll_wait(epollfd, event_array, MAX_EVENTS, -1);    //成功则返回数据元素个数
+        if(events < 0)
         {
-            printf("poll failure: %s\n", strerror(errno));
-            break;
+            printf("epoll failure: %s\n", strerror(errno));break;
         }
-        else if(rv == 0)
+        else if(events==0) 
         {
-            printf("poll get timeout\n");
+            printf("epoll timeout\n");
             continue;
         }
-        /* listen socket get event means new client start connect now */
-        else 
-        {
-            //printf("rv=%d, maxfd=%d, i=%d\n", rv, maxfd, i);
-            //maxfd = i>maxfd ? i : maxfd;
-            if(pollfds[0].revents & POLLIN)
+        //events>0 is the active events count
+        for(i = 0; i < events; i++)
+        {   
+            //for循环的events与结构体成员中的events不同
+            //按位与求的是结果，逻辑与求的是真或假
+            if((event_array[i].events&EPOLLERR) || (event_array[i].events&EPOLLHUP)) 
             {
-                if( (connfd=accept(listenfd, (struct sockaddr *)NULL, NULL)) < 0)   //保存客户端的地址和IP，不感兴趣可以传空
+                printf("epoll_wait get error on fd[%d]: %s\n",event_array[i].data.fd, strerror(errno));
+                epoll_ctl(epollfd, EPOLL_CTL_DEL, event_array[i].data.fd, NULL);
+                close(event_array[i].data.fd);
+            }
+            //listen socket get event means new client start connect now
+            if(event_array[i].data.fd == listenfd) //已将listenfd加入到epoll感兴趣事件集合
+            {
+                if((connfd=accept(listenfd, (struct sockaddr *)NULL, NULL)) < 0) //不保存客户端信息（结构体指针为NULL）
                 {
-                    printf("accept new client failure: %s\n", strerror(errno));
+                    printf("accept new client failure: %s\n", strerror(errno));      
                     continue;
                 }
-  
-                found = 0;
-                for(i=1; i<ARRAY_SIZE(pollfds); i++)
-                {   
-                    if( pollfds[i].fd < 0 )
-                    {
-                        printf("accept new client[%d] and add it into array\n", connfd );
-                        pollfds[i].fd = connfd;
-                        pollfds[i].events = POLLIN;
-                        found = 1;
-                        break;
-                    }
-                }
-                if( !found )
+                event.data.fd = connfd; 
+                event.events = EPOLLIN;
+                if(epoll_ctl(epollfd, EPOLL_CTL_ADD, connfd, &event) < 0 )
                 {
-                    printf("accept new client[%d] but full, so refuse it\n", connfd);
-                    close(connfd);
+                   printf("epoll add client socket failure: %s\n", strerror(errno));
+                   close(event_array[i].data.fd);
                     continue;
-                }	
-                maxfd = i>maxfd ? i : maxfd; 
-                //printf("rv=%d, maxfd=%d, i=%d\n", rv, maxfd, i);
-                if (--rv <= 0)
-                    continue; 
-                //printf("rv=%d, maxfd=%d\n", rv, maxfd, i);
-            }/* listen socket get event means new client start connect now */
+                }
+                printf("accept new client[%d] OK\n", connfd);           
+            }
             else //data arriver from alrady connected client
             {   
-                for(i=1; i<ARRAY_SIZE(pollfds); i++)
+                memset(buf, 0, sizeof(buf));
+                if((rv=read(event_array[i].data.fd, buf, sizeof(buf))) <= 0 )  //同上
                 {
-                    if( pollfds[i].fd < 0)
-                        continue;    
-                    memset(buf, 0, sizeof(buf));
-                if((rv=read(pollfds[i].fd, buf, sizeof(buf))) <= 0 )  //同上
-                {
-                    printf("socket[%d] read data failure or disconnect and will be remove.\n", pollfds[i].fd);
-                    close(pollfds[i].fd);
-                    pollfds[i].fd = -1;	
-                    pollfds[i].events = 0;
-                    continue;
+                     printf("socket[%d] read data failure or disconnect and will be remove.\n", event_array[i].data.fd);
+                     epoll_ctl(epollfd, EPOLL_CTL_DEL, event_array[i].data.fd, NULL);
+                     close(event_array[i].data.fd);
+                     continue;
                 }
                 else 
                 {
-                    printf("socket[%d] read data: %s\n", pollfds[i].fd, buf);
+                    printf("socket[%d] read data: %s\n", event_array[i].data.fd, buf);
                     /*  Open database  */
                     len = sqlite3_open(database_name, &db);
                     if(len != SQLITE_OK)
                     {
                         sqlite3_close(db);
-                        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));                               
-		                close(pollfds[i].fd);            //结束当前链接客户端
-                        pollfds[i].fd = -1;
-                        pollfds[i].events = 0;
+                        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));   
+                        epoll_ctl(epollfd, EPOLL_CTL_DEL, event_array[i].data.fd, NULL);                            
+		                close(event_array[i].data.fd);            //结束当前链接客户端
                         continue;    
                     }
                     printf("Opened database successfully\n");
@@ -285,48 +273,17 @@ int main(int argc, char *argv[])
                     {
                         sqlite3_close(db);
                         printf("insert data failure: %s!\n", zErrMsg);                                  
-                        close(pollfds[i].fd);            //结束当前链接客户端
-                        pollfds[i].fd = -1;
-                        pollfds[i].events = 0;
+                        epoll_ctl(epollfd, EPOLL_CTL_DEL, event_array[i].data.fd, NULL);
+                        close(event_array[i].data.fd);
                         continue;
                     }
                     printf("insert data successfully!\n");
                 }//read data from cilent fd
-                }
-            }//data arriver from alrady connected client
-        }//rv>0
+            } //for(i=0; i<ARRAY_SIZE(fds_array); i++)
+        }//data arriver from alrady connected client
     }//while(!g_sigstop)  
     close(listenfd);
     sqlite3_close(db);  //关闭数据库
 
     return 0;
-}
-
-int fds_add(struct pollfd *fds, int fd)
-{
-	int i = 1;
-	for(; i < ARRAY_SIZE(fds); i++)
-	{
-		if(fds[i].fd == -1)
-		{
-			fds[i].fd = fd;
-			fds[i].events = POLLIN;
-			fds[i].revents = 0;
-			break;
-		}
-	}
-}
-
-int fds_del(struct pollfd *fds, int fd)
-{
-	int i = 1;
-	for(; i < ARRAY_SIZE(fds); i++)
-	{
-		if(fds[i].fd == fd)
-		{
-			fds[i].fd = -1;
-			fds[i].events = 0;
-			break;
-		}
-	}
 }

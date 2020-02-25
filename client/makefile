@@ -9,21 +9,17 @@ STATLIB=-static
 CC=gcc
 
 all:
+	#${export} ${LD_LIBRARY_PATH}=${LD_LIBRARY_PATH}:${LIBPATH}
 	@echo "Start compile library..."
 	make -C src 
-	@echo "Start compile client_main program..."
+	@echo "Start compile client_main program..." 
 	${CC}  client_main.c -o ${APPNAME} ${HEADFILE}  ${LIBFILE} -lmyclient 
 
 
 run:
 	@echo "Start run test program..." 
-<<<<<<< HEAD
 	#export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:LIBPATH 
 	@echo "example: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/ten/tangzhiqiang/temperature_project/client/lib" 
-=======
-	#makefile??????????
-	export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:LIBPATH 
->>>>>>> 77afb4cfb4f84571dd147cdee5d8bf98337c0029
 	@echo "Mandatory arguments to long options are mandatory for short option too:"
 	@echo "-t[interv_time] RPI temperature interval time"
 	@echo "-p[port] Socket client port address"

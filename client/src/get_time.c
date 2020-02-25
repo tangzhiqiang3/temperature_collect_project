@@ -27,11 +27,7 @@ void get_time(char *data_time)
 
     time(&timep);       // 获取当前的系统时间（CUT时间）              
     p=gmtime(&timep);   //gmtime()函数参数timep 所指的time_t 结构中的信息转换成真实世界所使用的时间日期表示方法，然后将结果由结构strcut tm*返回
-<<<<<<< HEAD
     snprintf(data_time, 50, "%d-%02d-%02d  %02d:%02d:%02d", (1900+p->tm_year),  (1+p->tm_mon), p->tm_mday, (p->tm_hour+8), p->tm_min, p->tm_sec);
-=======
-    snprintf(data_time, 50, "%d-%d-%d  %d:%d:%d", (1900+p->tm_year),  (1+p->tm_mon), p->tm_mday, (p->tm_hour+8), p->tm_min, p->tm_sec);
->>>>>>> 77afb4cfb4f84571dd147cdee5d8bf98337c0029
     //小时+8是因为我们是+8区，比CUT多8个小时
     return ;
 }

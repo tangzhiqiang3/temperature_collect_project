@@ -38,12 +38,14 @@ int create_database(void)
     
     /*  Execute SQL statement */
     rc = sqlite3_exec(db, sql, 0, 0, &zErrMsg);
-    if( rc != SQLITE_OK )
-    {
-        sqlite3_close(db);
-        fprintf(stderr, "Create table error: %s\n", zErrMsg);
-        return -2;
-    }
+//    if( rc != SQLITE_OK )
+//    {
+//        sqlite3_close(db);
+//        fprintf(stderr, "Create table error: %s\n", zErrMsg);
+//        return 0;           //打开一个已创建的数据库，并已插入表，插入重复的表会失败，防止主程序退出
+//   }
     printf("Table created successfully\n");
-    //return db;
+
+    sqlite3_close(db);
+    return 1;
 }

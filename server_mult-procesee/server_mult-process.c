@@ -76,11 +76,7 @@ int main(int argc, char *argv[])
     char    delim[]="/";
     char    id[20];
     char    data_time[50];
-<<<<<<< HEAD
     char    temper[10];
-=======
-    float   temper[10];
->>>>>>> 77afb4cfb4f84571dd147cdee5d8bf98337c0029
     char    *ptr=NULL;
     //char    *p=NULL;
     
@@ -220,11 +216,7 @@ int main(int argc, char *argv[])
     {   
         //program will blocked here
         printf("Start accept new cilent...\n");
-<<<<<<< HEAD
         connfd=accept(listenfd, (struct sockaddr *)&serv_addr, &cliaddr_len);   //accepte() 第三个参数可以是siziof(struct sockaddr)
-=======
-        connfd=accept(listenfd, (struct sockaddr *)&serv_addr, &cliaddr_len);
->>>>>>> 77afb4cfb4f84571dd147cdee5d8bf98337c0029
         if(connfd < 0)
         {
             printf("accept new client failure: %s\n", strerror(errno));
@@ -275,13 +267,8 @@ int main(int argc, char *argv[])
 						strncpy((char *)temper, ptr, sizeof(temper));
 						ptr=strtok(NULL, delim);
 					}
-<<<<<<< HEAD
 					memset(sql1, 0, sizeof(sql1));
 					snprintf(sql1, 128, "insert into temperature values('%s', '%s', '%s');", id, data_time, temper);
-=======
-					memset(buf, 0, sizeof(sql1));
-					snprintf(sql1, 128, "insert into temperature values('%s', '%s', '%.2fC');", id, data_time, temper);
->>>>>>> 77afb4cfb4f84571dd147cdee5d8bf98337c0029
 					//保证了数组sql1的内容为字符串
 					sql1[127] = '\0';    
 					printf("%s\n", sql1); 
