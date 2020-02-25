@@ -128,6 +128,33 @@ int main(int argc, char *argv[])
                 return 0;
             }
 	} 
+<<<<<<< HEAD
+=======
+	
+//	len = sqlite3_open("temper.db", &db);
+//	if(len != SQLITE_OK)
+//	{
+//        	sqlite3_close(db);
+//	        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+//	        exit(1);
+//	}
+//    printf("Opened database successfully\n");
+//	
+//	/*   Create SQL statement */
+//	//sql ="create table if not exists temperature(ID char(10), datetime char(50), temperature  char(10))";
+//    sql ="create table temperature(ID char(10), datetime char(50), temperature  char(10))";
+//         
+//	/*   Execute SQL statement */
+//	rc = sqlite3_exec(db, sql, 0, 0, &zErrMsg);
+//    if( rc != SQLITE_OK )
+//   	{
+//        sqlite3_close(db); 
+//	 	fprintf(stderr, "Create table error: %s\n", zErrMsg);
+//        return -1;
+//    }
+//    printf("Table created successfully\n");
+
+>>>>>>> 77afb4cfb4f84571dd147cdee5d8bf98337c0029
     while (!g_sigstop) 
     {   
             /*采样SN、时间、温度...*/  
@@ -141,6 +168,26 @@ int main(int argc, char *argv[])
             memset(buf, 0, sizeof(buf));
             snprintf(buf, sizeof(buf), "%s/%s/%.2f%c", id, da_time, temper, 'C');
             
+<<<<<<< HEAD
+=======
+//            memset(buf, 0, sizeof(sql1));
+//            snprintf(sql1, 128, "insert into temperature values('%s', '%s', '%.2fC');", id, da_time, temper);
+//            //保证了数组sql1的内容为字符串
+//            sql1[127] = '\0';    
+//	        printf("%s\n", sql1); 
+//                            
+//            //调用sqlite3_exec()；将数据存储至temperature表中
+//            ret = sqlite3_exec(db, sql1, 0 , 0, &zErrMsg);
+//            if (ret != SQLITE_OK)     //判断返回值，如果不等于SQLITE_OK，即插入记录失败            
+//            {
+//                sqlite3_close(db);
+//            
+//                printf("insert data failure ； %s!\n", zErrMsg);                                  
+//                return 0;
+//            }
+//            printf("insert data successfully!\n");
+            
+>>>>>>> 77afb4cfb4f84571dd147cdee5d8bf98337c0029
             //未连接到服务器
             if(sock_fd < 0)
             {   
@@ -174,6 +221,10 @@ int main(int argc, char *argv[])
         return 0;
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 77afb4cfb4f84571dd147cdee5d8bf98337c0029
 void print_usage(char *progname)
 {
     printf("%s usage.\n", progname);     

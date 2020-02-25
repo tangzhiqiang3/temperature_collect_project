@@ -78,7 +78,11 @@ int main(int argc, char *argv[])
     char    delim[]="/";
     char    id[20];
     char    data_time[50];
+<<<<<<< HEAD
     char    temper[10];
+=======
+    float   temper[10];
+>>>>>>> 77afb4cfb4f84571dd147cdee5d8bf98337c0029
     char    *ptr=NULL;
     //char    *p=NULL;
     
@@ -263,16 +267,28 @@ int main(int argc, char *argv[])
                     //读到数据之后需要处理并保存到数据库
                     ptr = strtok(buf, delim);    
                     while(ptr != NULL)
+<<<<<<< HEAD
 		            {
 			            strncpy(id, ptr, sizeof(id));
+=======
+		    {
+			strncpy(id, ptr, sizeof(id));
+>>>>>>> 77afb4cfb4f84571dd147cdee5d8bf98337c0029
                     	ptr=strtok(NULL, delim);
                     	strncpy(data_time, ptr, sizeof(data_time));
                     	ptr=strtok(NULL, delim);
                     	strncpy(temper, ptr, sizeof(temper));
+<<<<<<< HEAD
 		    	        ptr=strtok(NULL, delim);
 		            }
                     memset(sql1, 0, sizeof(sql1));
                     snprintf(sql1, 128, "insert into temperature values('%s', '%s', '%s');", id, data_time, temper);
+=======
+		    	ptr=strtok(NULL, delim);
+		    }
+                    memset(buf, 0, sizeof(sql1));
+                    snprintf(sql1, 128, "insert into temperature values('%s', '%s', '%.2fC');", id, data_time, temper);
+>>>>>>> 77afb4cfb4f84571dd147cdee5d8bf98337c0029
                     //保证了数组sql1的内容为字符串
                     sql1[127] = '\0';    
                     printf("%s\n", sql1); 
